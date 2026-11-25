@@ -1,0 +1,12 @@
+# Config
+.vscode
+pyvenv.cfg
+
+# Generated files
+bin/
+__pycache__
+
+# Custom local files
+*.sh
+log.txt
+

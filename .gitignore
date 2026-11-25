@@ -1,6 +1,2 @@
-bin/
-*.sh
-pyvenv.cfg
-__pycache__
+# Config
 .vscode
-log.txt
