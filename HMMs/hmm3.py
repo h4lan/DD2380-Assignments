@@ -4,7 +4,7 @@ from hmm2 import safe_log
 
 def matrix_times_vector(matrix, vector):
     result = []
-    for i in range(len(matrix[0])):
+    for i in range(len(matrix)):
         total = 0.0
         for j in range(len(vector)):
             total += matrix[i][j] * vector[j]
@@ -26,9 +26,8 @@ def forward_pass(A, B, c, pi, observations):
     first_observation = observations[0]
     emission_column = [row[first_observation] for row in B] # Take the column of B for the first observation.
     alpha[0] = hmm1.elementwise_product(pi, emission_column)
-    c[0] = float("inf") if alpha[0] < 0 else  1/sum(alpha[0])
-
-    
+    c[0] = 0 if sum(alpha[0]) == 0 else 1/sum(alpha[0])
+    alpha[0] = scalar_multiplication(c[0], alpha[0])
 
     # Step 2: Recursion
     t = 1 # Starting from time step 1 > 0
@@ -41,7 +40,7 @@ def forward_pass(A, B, c, pi, observations):
         alpha[t] = hmm1.elementwise_product(predicted, emission_column) #alpha_t= bitwise[(alpha_t-1*A)*B(:,Ot)^T] in vectors
             
         # Scaling alpha_t(i)
-        c[t] = 1/sum(alpha[t])
+        c[t] = 0 if sum(alpha[t]) == 0 else 1/sum(alpha[t])
         alpha[t] = scalar_multiplication(c[t], alpha[t])
         t+=1
     
@@ -58,9 +57,9 @@ def backward_pass(A, B, c, observations):
     
     # Step 2: Recursion
     t = T-2
-    for observation in reversed(observation[:T-2]):
-        emission_column = [row[observation+1] for row in B]
-        beta[t] = c[t] * hmm1.matrix_times_vector(A, hmm1.elementwise_product(beta[t], emission_column))
+    for observation in reversed(observations[1:]):
+        emission_column = [row[observation] for row in B]
+        beta[t] = scalar_multiplication(c[t], matrix_times_vector(A, hmm1.elementwise_product(beta[t+1], emission_column)))
         t-=1
         
     return beta
@@ -72,11 +71,11 @@ def reestimation(A, B, alpha, beta, observations):
     gamma = [[0 for _ in range(N)] for _ in range(T)]
     
     # Step 1: using the alpha and beta matrices to compute gamma
-    for t in range(T-2):
+    for t in range(T-1):
         for i in range(N):
             emission_column = [row[observations[t+1]] for row in B]
             result = hmm1.elementwise_product(scalar_multiplication(alpha[t][i], A[i]),
-                                              scalar_multiplication(beta[t+1], emission_column))
+                                              hmm1.elementwise_product(beta[t+1], emission_column))
             for j in range(N):
                 di_gamma[t][i][j] = result[j]
                 gamma[t][i] += result[j]
@@ -89,13 +88,13 @@ def reestimation(A, B, alpha, beta, observations):
     updated_A = [[0 for _ in range(N)] for _ in range(N)]
     for i in range(N):
         denom = 0
-        for t in range(T-2):
+        for t in range(T-1):
             denom += gamma[t][i]
         for j in range(N):
             numer = 0
-            for t in range(T-2):
+            for t in range(T-1):
                 numer += di_gamma[t][i][j]
-            updated_A[i][j] = numer/denom
+            updated_A[i][j] = 0 if denom == 0 else numer/denom
             
     updated_B = [[-1 for _ in range(M)] for _ in range(N)]
     for i in range(N):
@@ -107,7 +106,7 @@ def reestimation(A, B, alpha, beta, observations):
             for t in range(T):
                 if (observations[t] == j):
                     numer += gamma[t][i]
-            updated_B[t][j] = numer/denom
+            updated_B[i][j] = 0 if denom == 0 else numer/denom
     
     return updated_A, updated_B
 
@@ -124,8 +123,6 @@ def hmm3(input_text):
     
     N, M, T = len(A[0]), len(B[0]), len(observations)
     
-    print(N, M, T)
-    
     iters, maxIters = 0, 100
     old_log_prob = -float("inf")
     while True:
@@ -135,13 +132,15 @@ def hmm3(input_text):
         A, B = reestimation(A, B, alpha, beta, observations)
 
         log_prob = -sum(map(safe_log, c))
+        iters += 1
         if (iters >= maxIters or log_prob <= old_log_prob):
             # Formatting output
-            s = f"{N} {N} " + ' '.join([str(A[i][j]) for i in range(N) for j in range(N)]) + "\n"
-            + f"{N} {T} " + ' '.join([str(B[i][j]) for i in range(N) for j in range(T)])
+            s = (f"{N} {N} " + ' '.join([str(A[i][j]) for i in range(N) for j in range(N)]) + "\n"
+            + f"{N} {M} " + ' '.join([str(B[i][j]) for i in range(N) for j in range(M)]))
             return s
         
         # Else, iterate again
+        old_log_prob = log_prob
         
 if __name__ == "__main__":
     print(hmm3(sys.stdin.read()))
