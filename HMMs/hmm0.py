@@ -1,3 +1,5 @@
+import sys
+
 def vector_times_matrix(vector, matrix):
     result = []
     for j in range(len(matrix[0])):
@@ -41,5 +43,4 @@ def hmm0(input_text):
                     + [str(value) for value in predicted_observation]) #values of predicted obs
 
 
-import sys
 print(hmm0(sys.stdin.read()))
