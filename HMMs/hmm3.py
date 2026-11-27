@@ -2,6 +2,8 @@ import sys
 import hmm1
 from hmm2 import safe_log
 
+MAX_ITERS = 10000
+
 def matrix_times_vector(matrix, vector):
     result = []
     for i in range(len(matrix)):
@@ -123,8 +125,7 @@ def hmm3(input_text):
     
     N, M, T = len(A[0]), len(B[0]), len(observations)
     
-    iters, maxIters = 0, 100
-    old_log_prob = -float("inf")
+    iters, old_log_prob = 0, -float("inf")
     while True:
         c = [0 for i in range(T)]
         alpha = forward_pass(A, B, c, pi, observations)
@@ -133,10 +134,11 @@ def hmm3(input_text):
 
         log_prob = -sum(map(safe_log, c))
         iters += 1
-        if (iters >= maxIters or log_prob <= old_log_prob):
+        if (iters >= MAX_ITERS or log_prob <= old_log_prob):
             # Formatting output
             s = (f"{N} {N} " + ' '.join([str(A[i][j]) for i in range(N) for j in range(N)]) + "\n"
-            + f"{N} {M} " + ' '.join([str(B[i][j]) for i in range(N) for j in range(M)]))
+            + f"{N} {M} " + ' '.join([str(B[i][j]) for i in range(N) for j in range(M)]) + "\n"
+            + f"Iterations: {iters}\n Log likelihood={log_prob}")
             return s
         
         # Else, iterate again
