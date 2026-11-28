@@ -141,6 +141,10 @@ def hmm3(input_text):
             + f"Iterations: {iters}\n Log likelihood={log_prob}")
             return s
         
+        # Logging when we dip below old_prob:
+        # if (prob < old_prob):
+        #     print(f"Drop: {prob-old_prob}")
+        
         # Else, iterate again
         old_log_prob = log_prob
         
